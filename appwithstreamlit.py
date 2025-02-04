@@ -546,6 +546,7 @@ def main():
     try:
         # Load raw data
         raw_data = pd.read_excel(RAW_DATA_FILE, skiprows=1)
+        print(raw_data.columns)
         # Load mapping data
         mapping_data = load_mapping_data()
         
