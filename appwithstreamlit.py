@@ -152,19 +152,19 @@ def create_column_mapping(query_columns, raw_data_columns):
     
     return mapping
 
-def load_raw_data(file_path):
-    """Load raw data with correct row and column handling"""
-    try:
-        # Read Excel file starting from row 2 (1-based index)
-        raw_data = pd.read_excel(file_path, skiprows=1)
+# def load_raw_data(file_path):
+#     """Load raw data with correct row and column handling"""
+#     try:
+#         # Read Excel file starting from row 2 (1-based index)
+#         raw_data = pd.read_excel(file_path, skiprows=1)
         
-        print("\n[DEBUG] Available columns in raw data:")
-        print(raw_data.columns.tolist())
+#         print("\n[DEBUG] Available columns in raw data:")
+#         print(raw_data.columns.tolist())
         
-        return raw_data
-    except Exception as e:
-        print(f"Error loading raw data: {e}")
-        return None
+#         return raw_data
+#     except Exception as e:
+#         print(f"Error loading raw data: {e}")
+#         return None
 
 def filter_npi_based_on_query(raw_data, final_query):
     """Filters NPI based on the given arithmetic query condition."""
@@ -301,18 +301,18 @@ def save_to_excel(final_query, filtered_npi):
             return
 
 
-def load_mapping_data(file_path):
-    """Load and prepare mapping data from Excel file."""
-    try:
-        # Read Excel file instead of CSV
-        mapping_df = pd.read_excel(file_path)
-        # Convert columns to string type
-        mapping_df['Question Distinction'] = mapping_df['Question Distinction'].astype(str)
-        mapping_df['Question sub type'] = mapping_df['Question sub type'].astype(str)
-        return mapping_df
-    except Exception as e:
-        print(f"Error loading Excel file: {e}")
-        return None
+# def load_mapping_data(file_path):
+#     """Load and prepare mapping data from Excel file."""
+#     try:
+#         # Read Excel file instead of CSV
+#         mapping_df = pd.read_excel(file_path)
+#         # Convert columns to string type
+#         mapping_df['Question Distinction'] = mapping_df['Question Distinction'].astype(str)
+#         mapping_df['Question sub type'] = mapping_df['Question sub type'].astype(str)
+#         return mapping_df
+#     except Exception as e:
+#         print(f"Error loading Excel file: {e}")
+#         return None
 
 def split_query(query):
     """Split query based on mathematical and arithmetic operations."""
@@ -486,7 +486,7 @@ Return only the matching distinction text, without any explanation."""
 
 def process_query(user_query, mapping_file):
     """Main function to process user query."""
-    mapping_df = load_mapping_data(mapping_file)
+    mapping_df = load_mapping_data()
     if mapping_df is None:
         return "Error: Could not load mapping data"
 
