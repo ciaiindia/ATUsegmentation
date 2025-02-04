@@ -21,8 +21,7 @@ try:
     client = AzureOpenAI(
         api_key=st.secrets["AZURE_OPENAI_KEY"],
         api_version="2024-02-15-preview",
-        azure_endpoint=st.secrets["AZURE_OPENAI_ENDPOINT"],
-        default_headers={"Proxy-Authorization": None}  # Remove proxy settings
+        azure_endpoint=st.secrets["AZURE_OPENAI_ENDPOINT"]
     )
     st.sidebar.success("Successfully initialized Azure OpenAI client!")
 
