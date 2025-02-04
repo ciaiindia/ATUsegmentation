@@ -24,34 +24,19 @@ def initialize_azure_client():
         st.write("Using Azure OpenAI endpoint:", credentials["endpoint"])
         st.write("Using Azure OpenAI model:", credentials["model"])
         
-        # Initialize the client with all required parameters
-        client = AzureOpenAI(
-            api_key=credentials["api_key"],
+        # Initialize the client with only the required parameters
+        return AzureOpenAI(
             azure_endpoint=credentials["endpoint"],
-            api_version="2024-02-15-preview"  # Adding back the API version
+            api_key=credentials["api_key"],
+            api_version="2024-02-15-preview",
+            default_headers={"User-Agent": "Streamlit/1.0"}
         )
-        
-        # Test the client with a simple completion
-        test_messages = [
-            {"role": "user", "content": "Hello, are you working?"}
-        ]
-        completion = client.chat.completions.create(
-            model=credentials["model"],
-            messages=test_messages,
-            temperature=0,
-            max_tokens=10
-        )
-        
-        st.success("Azure OpenAI client initialized successfully!")
-        return client
         
     except Exception as e:
         st.error(f"Error initializing Azure OpenAI client: {str(e)}")
         st.error("Please check if your Azure OpenAI credentials are correctly set in Streamlit secrets.")
         st.stop()
 
-# Initialize the client
-client = initialize_azure_client()
 st.set_page_config(
     page_title="Query Processing App",
     page_icon="🔍",
@@ -61,6 +46,10 @@ st.set_page_config(
 # Add title and description
 st.title("Query Processing Application")
 st.markdown("Process queries and filter NPIs based on specific conditions")
+
+
+# Initialize the client
+client = initialize_azure_client()
 
 # Initialize session state
 if 'processed_results' not in st.session_state:
