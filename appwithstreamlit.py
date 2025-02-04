@@ -10,21 +10,48 @@ import io
 # Load environment variables
 load_dotenv()
 
-# Azure OpenAI setup with error handling
-try:
-    azure_openai_endpoint = st.secrets["AZURE_OPENAI_ENDPOINT"]
-    azure_openai_api_key = st.secrets["AZURE_OPENAI_API_KEY"]
-    azure_openai_model_gpt4 = st.secrets["AZURE_OPENAI_MODEL"]
+# Azure OpenAI setup with detailed error handling
+def initialize_azure_client():
+    try:
+        # First try getting from Streamlit secrets
+        credentials = {
+            "endpoint": st.secrets.get("AZURE_OPENAI_ENDPOINT", "https://ciaiaiservices.openai.azure.com/"),
+            "api_key": st.secrets.get("AZURE_OPENAI_API_KEY", "817dce22f5a548b8b11fe0b6a3cf2c36"),
+            "model": st.secrets.get("AZURE_OPENAI_MODEL", "gpt-4o-20240513")
+        }
+        
+        # For debugging - show what credentials we're using (mask API key)
+        st.write("Using Azure OpenAI endpoint:", credentials["endpoint"])
+        st.write("Using Azure OpenAI model:", credentials["model"])
+        
+        # Initialize the client
+        client = AzureOpenAI(
+            api_key=credentials["api_key"],
+            api_version="2024-02-15-preview",
+            azure_endpoint=credentials["endpoint"]
+        )
+        
+        # Test the client with a simple completion
+        test_messages = [
+            {"role": "user", "content": "Hello, are you working?"}
+        ]
+        completion = client.chat.completions.create(
+            model=credentials["model"],
+            messages=test_messages,
+            temperature=0,
+            max_tokens=10
+        )
+        
+        st.success("Azure OpenAI client initialized successfully!")
+        return client
+        
+    except Exception as e:
+        st.error(f"Error initializing Azure OpenAI client: {str(e)}")
+        st.error("Please check if your Azure OpenAI credentials are correctly set in Streamlit secrets.")
+        st.stop()
 
-    # Initialize Azure OpenAI client
-    client = AzureOpenAI(
-        api_key=azure_openai_api_key,
-        api_version="2024-02-15-preview",
-        azure_endpoint=azure_openai_endpoint
-    )
-except Exception as e:
-    st.error("Error initializing Azure OpenAI client. Please check your environment variables.")
-    st.stop()
+# Initialize the client
+client = initialize_azure_client()
 st.set_page_config(
     page_title="Query Processing App",
     page_icon="🔍",
