@@ -18,38 +18,46 @@ st.set_page_config(
 st.title("Query Processing Application")
 st.markdown("Process queries and filter NPIs based on specific conditions")
 
-# Debug: Print available secrets
-try:
-    st.write("Available secrets:", st.secrets)
-except:
-    st.write("No secrets available in st.secrets")
-
 # Azure OpenAI setup
 try:
     # Configure OpenAI with Azure settings
     openai.api_type = "azure"
-    openai.api_version = "2024-02-15-preview"
+    openai.api_version = "2023-05-15"  # Using a stable API version
     openai.api_base = st.secrets["secrets"]["AZURE_OPENAI_ENDPOINT"]
     openai.api_key = st.secrets["secrets"]["AZURE_OPENAI_API_KEY"]
-    st.success("Azure OpenAI client initialized successfully!")
+    
+    # Test the configuration
+    try:
+        response = openai.ChatCompletion.create(
+            engine=st.secrets["secrets"]["AZURE_OPENAI_MODEL"],
+            messages=[{"role": "user", "content": "test"}],
+            max_tokens=5,
+            deployment_id=st.secrets["secrets"]["AZURE_OPENAI_MODEL"]
+        )
+        st.success("Azure OpenAI connection initialized successfully!")
+    except Exception as e:
+        st.error(f"Error testing Azure OpenAI connection: {str(e)}")
+        st.stop()
 except Exception as e:
-    st.error(f"Error initializing Azure OpenAI: {str(e)}")
+    st.error(f"Error initializing Azure OpenAI settings: {str(e)}")
     st.stop()
 
+# Fixed file paths
+MAPPING_FILE = "Segmentation Mapping.xlsx"
+RAW_DATA_FILE = "27.12.2024_CSL Vifor Global ATU_Final raw data_v1.xlsx"
 
-# Initialize session state
-if 'processed_results' not in st.session_state:
-    st.session_state.processed_results = None
+@st.cache_data
+def load_mapping_data():
+    """Load and cache mapping data"""
+    try:
+        mapping_df = pd.read_excel(MAPPING_FILE)
+        mapping_df['Question Distinction'] = mapping_df['Question Distinction'].astype(str)
+        mapping_df['Question sub type'] = mapping_df['Question sub type'].astype(str)
+        return mapping_df
+    except Exception as e:
+        st.error(f"Error loading mapping file: {e}")
+        return None
 
-# File upload section
-st.header("Upload Files")
-col1, col2 = st.columns(2)
-
-with col1:
-    mapping_file = st.file_uploader("Upload Mapping File (Excel)", type=['xlsx'])
-
-with col2:
-    raw_data_file = st.file_uploader("Upload Raw Data File (Excel)", type=['xlsx'])
 
 def get_correct_column_name(df, column_name):
     """
@@ -411,19 +419,17 @@ Instructions:
 Return only the exact matching question sub type from the list, without any explanation."""
     
     try:
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": query}
-        ]
-        
-        completion = client.chat.completions.create(
-            model=azure_openai_model_gpt4,
-            messages=messages,
+        response = openai.ChatCompletion.create(
+            engine=st.secrets["secrets"]["AZURE_OPENAI_MODEL"],
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": query}
+            ],
             temperature=0,
-            n=1,
-            seed=1
+            max_tokens=150,
+            deployment_id=st.secrets["secrets"]["AZURE_OPENAI_MODEL"]
         )
-        matched_subtype = completion.choices[0].message.content.strip()
+        matched_subtype = response.choices[0].message.content.strip()
         print(f"\nMatched question sub type for '{query}': {matched_subtype}")
         return matched_subtype
     except Exception as e:
@@ -455,21 +461,19 @@ Instructions:
 
 Return only the matching distinction text, without any explanation."""
 
-    try:
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": query}
-        ]
-        
-        completion = client.chat.completions.create(
-            model=azure_openai_model_gpt4,
-            messages=messages,
+   try:
+        response = openai.ChatCompletion.create(
+            engine=st.secrets["secrets"]["AZURE_OPENAI_MODEL"],
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": query}
+            ],
             temperature=0,
-            n=1,
-            seed=1
+            max_tokens=100,
+            deployment_id=st.secrets["secrets"]["AZURE_OPENAI_MODEL"]
         )
         
-        matched_distinction = completion.choices[0].message.content.strip()
+        matched_distinction = response.choices[0].message.content.strip()
         
         # Verify the matched distinction exists in our list
         if matched_distinction in possible_distinctions:
@@ -538,141 +542,210 @@ def process_query(user_query, mapping_file):
 
 
 def main():
-    if not (mapping_file and raw_data_file):
-        st.warning("Please upload all required files")
-        return
-
-    # Load raw data
-    st.subheader("Raw Data Preview")
+    # Load both raw data and mapping data at startup
     try:
-        raw_data = pd.read_excel(raw_data_file, skiprows=1)
-        st.dataframe(raw_data.head())
+        # Load raw data
+        raw_data = pd.read_excel(RAW_DATA_FILE, skiprows=1)
+        # Load mapping data
+        mapping_data = load_mapping_data()
+        
+        if mapping_data is None:
+            st.error("Failed to load mapping data. Please check the mapping file.")
+            st.stop()
+            
+        # Store data in session state
+        if 'raw_data' not in st.session_state:
+            st.session_state.raw_data = raw_data
+        if 'mapping_data' not in st.session_state:
+            st.session_state.mapping_data = mapping_data
+            
+        # Show a summary of the data
+        st.markdown("### Data Summary")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Total Records", len(raw_data))
+        with col2:
+            st.metric("Total NPIs", raw_data['NPI'].nunique())
+        with col3:
+            st.metric("Mapping Rules", len(mapping_data))
+            
+        # Optional data preview in expander
+        with st.expander("View Data Preview"):
+            tab1, tab2 = st.tabs(["Raw Data", "Mapping Data"])
+            with tab1:
+                st.dataframe(raw_data.head(), use_container_width=True)
+            with tab2:
+                st.dataframe(mapping_data.head(), use_container_width=True)
+                
+    except FileNotFoundError as e:
+        st.error(f"Error: Could not find required files. {str(e)}")
+        st.write("Current working directory:", os.getcwd())
+        st.write("Files in current directory:", os.listdir())
+        st.stop()
     except Exception as e:
-        st.error(f"Error loading raw data: {str(e)}")
-        return
+        st.error(f"Error loading data: {str(e)}")
+        st.stop()
 
-    # Query input
+    # Query section with examples
     st.header("Query Processing")
+    
+    # Example queries in an expander
+    with st.expander("View Example Queries"):
+        st.markdown("""
+        Here are some example queries you can try:
+        1. Inperson sales rep visits of Veltassa and Lokelma combined is greater than or equal to 2
+        2. Number of in-person visits from Veltassa sales representatives is at least 3
+        3. At most 1 in-person visit from Lokelma sales representatives
+        
+        Click on any example to use it.
+        """)
+        
+        if st.button("Use Example 1"):
+            st.session_state.query = "Inperson sales rep visits of Veltassa and Lokelma combined is greater than or equal to 2"
+        if st.button("Use Example 2"):
+            st.session_state.query = "Number of in-person visits from Veltassa sales representatives is at least 3"
+        if st.button("Use Example 3"):
+            st.session_state.query = "At most 1 in-person visit from Lokelma sales representatives"
+    
+    # Initialize session state for query if not exists
+    if 'query' not in st.session_state:
+        st.session_state.query = ""
+    
+    # Query input with session state
     user_query = st.text_input(
-        "Enter your query:", 
-        placeholder="e.g., Inperson sales rep visits of Veltassa and Lokelma combined is greater than or equal to 2"
+        "Enter your query:",
+        value=st.session_state.query,
+        placeholder="e.g., Inperson sales rep visits of Veltassa and Lokelma combined is greater than or equal to 2",
+        key="query_input"
     )
+    
+    # Process button with improved styling
+    col1, col2, col3 = st.columns([1,2,1])
+    with col2:
+        if st.button("Process Query", use_container_width=True):
+            with st.spinner("Processing query..."):
+                try:
+                    # Define system prompt
+                    system_prompt = """Analyze the given user query carefully and convert it into a structured arithmetic expression that fits the different conditions mentioned.
+    
+    Guidelines for Conversion:
+    Identify Mathematical Operations:
+    Recognize keywords like "at most," "at least," "more than," "less than," etc., and map them to the appropriate arithmetic operators:
+    at most → ≤
+    at least → ≥
+    More than → >
+    Less than → <
+    Exactly → =
+    Break Down Multiple Conditions:
+    
+    If the query contains multiple conditions connected by conjunctions (e.g., "and," "or," "but"), split them accordingly and structure each as an individual arithmetic component.
+    Standardize Query Components:
+    
+    Convert qualitative statements into measurable parameters.
+    Maintain consistency in terminology and ensure the transformed expression retains the original meaning.
+    Example Conversion:
+    User Query:
+    "Find HCPs who report at most 1 inperson visit from Veltassa and Lokelma sales representatives in the past three months."
+    
+    Transformed Arithmetic Expression:
+    "Number of Inperson Visits from Sales Representatives in the Past 3 Months for Veltassa + Number of Inperson Visits from Sales Representatives in the Past 3 Months for Lokelma ≤ 1"""
 
-    if st.button("Process Query"):
-        with st.spinner("Processing query..."):
-            try:
-                # Define system prompt
-                system_prompt = """Analyze the given user query carefully and convert it into a structured arithmetic expression that fits the different conditions mentioned.
-                
-                Guidelines for Conversion:
-                Identify Mathematical Operations:
-                Recognize keywords like "at most," "at least," "more than," "less than," etc., and map them to the appropriate arithmetic operators:
-                at most → ≤
-                at least → ≥
-                More than → >
-                Less than → <
-                Exactly → =
-                Break Down Multiple Conditions:
-                
-                If the query contains multiple conditions connected by conjunctions (e.g., "and," "or," "but"), split them accordingly and structure each as an individual arithmetic component.
-                Standardize Query Components:
-                
-                Convert qualitative statements into measurable parameters.
-                Maintain consistency in terminology and ensure the transformed expression retains the original meaning.
-                Example Conversion:
-                User Query:
-                "Find HCPs who report at most 1 inperson visit from Veltassa and Lokelma sales representatives in the past three months."
-                
-                Transformed Arithmetic Expression:
-                "Number of Inperson Visits from Sales Representatives in the Past 3 Months for Veltassa + Number of Inperson Visits from Sales Representatives in the Past 3 Months for Lokelma ≤ 1"""
-                
-                # Process through OpenAI
-                st.subheader("Query Processing Steps")
-                with st.expander("1. Initial Query Transformation", expanded=True):
-                    messages = [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_query}
-                    ]
-                    
-                    completion = client.chat.completions.create(
-                        model=azure_openai_model_gpt4,
-                        messages=messages,
-                        temperature=0,
-                        n=1,
-                        seed=1
-                    )
-                    final_query = completion.choices[0].message.content.strip()
-                    st.write("Transformed Query:", final_query)
-
-                # Process through mapping system
-                with st.expander("2. Query Mapping and Processing", expanded=True):
-                    result = process_query(final_query, mapping_file)
-                    if not isinstance(result, dict):
-                        st.error("Query processing failed")
-                        return
-
-                    final_query = result['final_query']
-                    st.write("Final Formatted Query:", final_query)
-
-                # Filter NPIs
-                with st.expander("3. Results", expanded=True):
-                    filtered_npi = filter_npi_based_on_query(raw_data, final_query)
-                    
-                    if filtered_npi is not None and not filtered_npi.empty:
-                        # Convert to list and display results
-                        npi_list = filtered_npi.astype(str).tolist()
-                        
-                        # Display summary
-                        st.success(f"Found {len(npi_list)} matching NPIs")
-                        
-                        # Create a DataFrame for better display
-                        result_df = pd.DataFrame(npi_list, columns=['NPI'])
-                        st.dataframe(result_df)
-                        
-                        # Download options
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
-                            # CSV Download
-                            csv_data = result_df.to_csv(index=False)
-                            st.download_button(
-                                label="Download NPIs as CSV",
-                                data=csv_data,
-                                file_name="filtered_npis.csv",
-                                mime="text/csv"
+                    # Process through OpenAI
+                    st.subheader("Query Processing Steps")
+                    with st.expander("1. Initial Query Transformation", expanded=True):
+                        try:
+                            response = openai.ChatCompletion.create(
+                                engine=st.secrets["secrets"]["AZURE_OPENAI_MODEL"],
+                                messages=[
+                                    {"role": "system", "content": system_prompt},
+                                    {"role": "user", "content": user_query}
+                                ],
+                                temperature=0,
+                                max_tokens=150,
+                                deployment_id=st.secrets["secrets"]["AZURE_OPENAI_MODEL"]
                             )
-                            
-                        with col2:
-                            # Excel Download
-                            excel_buffer = pd.ExcelWriter('filtered_npis.xlsx', engine='openpyxl')
-                            result_df.to_excel(excel_buffer, index=False)
-                            excel_buffer.close()
-                            
-                            with open('filtered_npis.xlsx', 'rb') as f:
-                                excel_data = f.read()
-                            
-                            st.download_button(
-                                label="Download NPIs as Excel",
-                                data=excel_data,
-                                file_name="filtered_npis.xlsx",
-                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                            )
+                            final_query = response.choices[0].message.content.strip()
+                            st.write("Transformed Query:", final_query)
+                            st.session_state['last_transformed_query'] = final_query
+                        except Exception as e:
+                            st.error(f"Error in OpenAI query transformation: {str(e)}")
+                            st.stop()
+
+                    # Process through mapping system
+                    with st.expander("2. Query Mapping and Processing", expanded=True):
+                        result = process_query(final_query, st.session_state.mapping_data)
+                        if not isinstance(result, dict):
+                            st.error("Query processing failed")
+                            return
+
+                        final_query = result['final_query']
+                        st.write("Final Formatted Query:", final_query)
+
+                    # Filter NPIs
+                    with st.expander("3. Results", expanded=True):
+                        filtered_npi = filter_npi_based_on_query(st.session_state.raw_data, final_query)
                         
-                        # Display query summary
-                        st.subheader("Query Summary")
-                        summary_data = {
-                            "Original Query": user_query,
-                            "Transformed Query": final_query,
-                            "Total NPIs Found": len(npi_list)
-                        }
-                        st.json(summary_data)
-                        
-                    else:
-                        st.warning("No matching NPIs found")
-                        
-            except Exception as e:
-                st.error(f"Error processing query: {str(e)}")
-                st.error("Please check your query and try again")
+                        if filtered_npi is not None and not filtered_npi.empty:
+                            # Convert to list and display results
+                            npi_list = filtered_npi.astype(str).tolist()
+                            
+                            # Create results container
+                            results_container = st.container()
+                            
+                            with results_container:
+                                # Display summary metrics
+                                col1, col2 = st.columns(2)
+                                with col1:
+                                    st.metric("Matching NPIs", len(npi_list))
+                                with col2:
+                                    match_percentage = (len(npi_list) / len(st.session_state.raw_data)) * 100
+                                    st.metric("Match Percentage", f"{match_percentage:.1f}%")
+                                
+                                # Create a DataFrame for better display
+                                result_df = pd.DataFrame(npi_list, columns=['NPI'])
+                                
+                                # Display results in a nice table
+                                st.markdown("### Matching NPIs")
+                                st.dataframe(
+                                    result_df,
+                                    use_container_width=True,
+                                    height=400
+                                )
+                                
+                                # Download section
+                                st.markdown("### Download Results")
+                                download_col1, download_col2 = st.columns(2)
+                                
+                                with download_col1:
+                                    # CSV Download with counter
+                                    csv_data = result_df.to_csv(index=False)
+                                    st.download_button(
+                                        label="📥 Download as CSV",
+                                        data=csv_data,
+                                        file_name=f"filtered_npis_{len(npi_list)}_results.csv",
+                                        mime="text/csv",
+                                        use_container_width=True
+                                    )
+                                
+                                with download_col2:
+                                    # Excel Download with counter
+                                    buffer = io.BytesIO()
+                                    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                                        result_df.to_excel(writer, index=False)
+                                    
+                                    st.download_button(
+                                        label="📥 Download as Excel",
+                                        data=buffer.getvalue(),
+                                        file_name=f"filtered_npis_{len(npi_list)}_results.xlsx",
+                                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                        use_container_width=True
+                                    )
+                        else:
+                            st.warning("No matching NPIs found")
+                            
+                except Exception as e:
+                    st.error(f"Error processing query: {str(e)}")
+                    st.error("Please check your query and try again")
 
 if __name__ == "__main__":
     main()
