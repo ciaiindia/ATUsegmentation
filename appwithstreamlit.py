@@ -1,12 +1,11 @@
 import streamlit as st
 import pandas as pd
-from openai import AzureOpenAI
+import openai
 from difflib import SequenceMatcher
 import re
 import os
 from dotenv import load_dotenv
 import io
-import toml
 
 # Page configuration
 st.set_page_config(
@@ -21,26 +20,20 @@ st.markdown("Process queries and filter NPIs based on specific conditions")
 
 # Debug: Print available secrets
 try:
-    # Try to directly access secrets
     st.write("Available secrets:", st.secrets)
 except:
     st.write("No secrets available in st.secrets")
 
-# Azure OpenAI setup with hardcoded values for testing
-azure_endpoint = "https://ciaiaiservices.openai.azure.com/"
-azure_api_key = "817dce22f5a548b8b11fe0b6a3cf2c36"
-azure_model = "gpt-4o-20240513"
-
+# Azure OpenAI setup
 try:
-    # Initialize OpenAI client
-    client = AzureOpenAI(
-        azure_endpoint=azure_endpoint,
-        api_key=azure_api_key,
-        api_version="2024-02-15-preview"
-    )
+    # Configure OpenAI with Azure settings
+    openai.api_type = "azure"
+    openai.api_version = "2024-02-15-preview"
+    openai.api_base = st.secrets["secrets"]["AZURE_OPENAI_ENDPOINT"]
+    openai.api_key = st.secrets["secrets"]["AZURE_OPENAI_API_KEY"]
     st.success("Azure OpenAI client initialized successfully!")
 except Exception as e:
-    st.error(f"Error initializing Azure OpenAI client: {str(e)}")
+    st.error(f"Error initializing Azure OpenAI: {str(e)}")
     st.stop()
 
 
