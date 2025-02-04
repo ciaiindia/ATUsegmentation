@@ -37,14 +37,6 @@ except Exception as e:
     st.stop()
 
 
-# Add title and description
-st.title("Query Processing Application")
-st.markdown("Process queries and filter NPIs based on specific conditions")
-
-
-# Initialize the client
-client = initialize_azure_client()
-
 # Initialize session state
 if 'processed_results' not in st.session_state:
     st.session_state.processed_results = None
