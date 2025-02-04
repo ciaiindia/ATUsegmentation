@@ -6,32 +6,15 @@ import re
 import requests
 
 try:
-    # Try to access secrets and show status
-    if "AZURE_OPENAI_KEY" in st.secrets:
-        st.sidebar.success("Azure OpenAI Key found in secrets!")
-    else:
-        st.sidebar.error("Azure OpenAI Key not found in secrets!")
-        
-    if "AZURE_OPENAI_ENDPOINT" in st.secrets:
-        st.sidebar.success("Azure OpenAI Endpoint found in secrets!")
-    else:
-        st.sidebar.error("Azure OpenAI Endpoint not found in secrets!")
-
-    # Initialize Azure OpenAI client without proxies
     client = AzureOpenAI(
         api_key=st.secrets["AZURE_OPENAI_KEY"],
         api_version="2024-02-15-preview",
         azure_endpoint=st.secrets["AZURE_OPENAI_ENDPOINT"]
     )
     st.sidebar.success("Successfully initialized Azure OpenAI client!")
-
 except Exception as e:
-    st.sidebar.error(f"Error with secrets or client initialization: {str(e)}")
+    st.sidebar.error(f"Error initializing Azure OpenAI client: {str(e)}")
     st.stop()
-
-# Constants
-AZURE_OPENAI_MODEL = "gpt-4o-20240513"
-
 def get_correct_column_name(df, column_name):
     """
     Get the actual column name from DataFrame accounting for whitespace variations.
