@@ -6,17 +6,25 @@ import re
 import requests
 
 try:
+    print("Available secrets:", st.secrets.list_all())
+    print("Azure Key:", st.secrets["AZURE_OPENAI_KEY"][:5] + "...")  # Print first 5 chars for verification
+    print("Azure Endpoint:", st.secrets["AZURE_OPENAI_ENDPOINT"])
+except Exception as e:
+    st.error(f"Error accessing secrets: {str(e)}")
+    st.stop()
+
+# Initialize Azure OpenAI client with secrets
+try:
     # Get credentials from Streamlit secrets
     client = AzureOpenAI(
         api_key=st.secrets["AZURE_OPENAI_KEY"],
         api_version="2024-02-15-preview",
         azure_endpoint=st.secrets["AZURE_OPENAI_ENDPOINT"]
     )
+    st.success("Successfully initialized Azure OpenAI client!")
 except Exception as e:
-    st.error("Error initializing Azure OpenAI client. Please check your credentials in Streamlit secrets.")
+    st.error(f"Error initializing Azure OpenAI client: {str(e)}")
     st.stop()
-
-# Define the model name
 AZURE_OPENAI_MODEL = "gpt-4o-20240513"
 
 # Initialize OpenAI client
