@@ -621,8 +621,8 @@ def main():
             st.markdown("""
             Here are some example queries you can try:
             1. Inperson sales rep visits of Veltassa and Lokelma combined is greater than or equal to 2
-            2. Number of in-person visits from Veltassa sales representatives is at least 3
-            3. At most 1 in-person visit from Lokelma sales representatives
+            2. Number of inperson visits from Veltassa sales representatives is at least 3
+            3. At most 1 inperson visit from Lokelma sales representatives
             
             Click on any example to use it.
             """)
@@ -630,9 +630,9 @@ def main():
             if st.button("Use Example 1"):
                 st.session_state.query = "Inperson sales rep visits of Veltassa and Lokelma combined is greater than or equal to 2"
             if st.button("Use Example 2"):
-                st.session_state.query = "Number of in-person visits from Veltassa sales representatives is at least 3"
+                st.session_state.query = "Number of inperson visits from Veltassa sales representatives is at least 3"
             if st.button("Use Example 3"):
-                st.session_state.query = "At most 1 in-person visit from Lokelma sales representatives"
+                st.session_state.query = "At most 1 inperson visit from Lokelma sales representatives"
         
         # Initialize session state for query if not exists
         if 'query' not in st.session_state:
