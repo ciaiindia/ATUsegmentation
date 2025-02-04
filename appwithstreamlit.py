@@ -461,7 +461,7 @@ Instructions:
 
 Return only the matching distinction text, without any explanation."""
 
-   try:
+    try:
         response = openai.ChatCompletion.create(
             engine=st.secrets["secrets"]["AZURE_OPENAI_MODEL"],
             messages=[
