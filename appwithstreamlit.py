@@ -29,8 +29,7 @@ try:
     st.success("Azure OpenAI client initialized successfully!")
 except Exception as e:
     st.error(f"Error initializing Azure OpenAI client: {str(e)}")
-    st.stop()"Please check if your Azure OpenAI credentials are correctly set in Streamlit secrets.")
-        st.stop()
+    st.stop()
 
 
 # Add title and description
