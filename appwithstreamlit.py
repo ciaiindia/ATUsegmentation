@@ -5,10 +5,19 @@ from difflib import SequenceMatcher
 import re
 import requests
 
-# Azure OpenAI setup
-azure_openai_endpoint = st.secrets["AZURE_OPENAI_ENDPOINT"]
-azure_openai_api_key = st.secrets["AZURE_OPENAI_KEY"]
-azure_openai_model_gpt4 = "gpt-4o-20240513"
+try:
+    # Get credentials from Streamlit secrets
+    client = AzureOpenAI(
+        api_key=st.secrets["AZURE_OPENAI_KEY"],
+        api_version="2024-02-15-preview",
+        azure_endpoint=st.secrets["AZURE_OPENAI_ENDPOINT"]
+    )
+except Exception as e:
+    st.error("Error initializing Azure OpenAI client. Please check your credentials in Streamlit secrets.")
+    st.stop()
+
+# Define the model name
+AZURE_OPENAI_MODEL = "gpt-4o-20240513"
 
 # Initialize OpenAI client
 client = AzureOpenAI(
