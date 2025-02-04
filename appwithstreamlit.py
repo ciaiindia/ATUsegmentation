@@ -7,41 +7,31 @@ import os
 from dotenv import load_dotenv
 import io
 
-# Load environment variables
-load_dotenv()
-
-# Azure OpenAI setup with detailed error handling
-def initialize_azure_client():
-    try:
-        # First try getting from Streamlit secrets
-        credentials = {
-            "endpoint": st.secrets.get("AZURE_OPENAI_ENDPOINT", "https://ciaiaiservices.openai.azure.com/"),
-            "api_key": st.secrets.get("AZURE_OPENAI_API_KEY", "817dce22f5a548b8b11fe0b6a3cf2c36"),
-            "model": st.secrets.get("AZURE_OPENAI_MODEL", "gpt-4o-20240513")
-        }
-        
-        # For debugging - show what credentials we're using (mask API key)
-        st.write("Using Azure OpenAI endpoint:", credentials["endpoint"])
-        st.write("Using Azure OpenAI model:", credentials["model"])
-        
-        # Initialize the client with only the required parameters
-        return AzureOpenAI(
-            azure_endpoint=credentials["endpoint"],
-            api_key=credentials["api_key"],
-            api_version="2024-02-15-preview",
-            default_headers={"User-Agent": "Streamlit/1.0"}
-        )
-        
-    except Exception as e:
-        st.error(f"Error initializing Azure OpenAI client: {str(e)}")
-        st.error("Please check if your Azure OpenAI credentials are correctly set in Streamlit secrets.")
-        st.stop()
-
+# Page configuration
 st.set_page_config(
     page_title="Query Processing App",
     page_icon="🔍",
     layout="wide"
 )
+
+# Add title and description
+st.title("Query Processing Application")
+st.markdown("Process queries and filter NPIs based on specific conditions")
+
+# Azure OpenAI setup
+try:
+    # Initialize OpenAI client
+    client = AzureOpenAI(
+        azure_endpoint=st.secrets["AZURE_OPENAI_ENDPOINT"],
+        api_key=st.secrets["AZURE_OPENAI_API_KEY"],
+        api_version="2024-02-15-preview"
+    )
+    st.success("Azure OpenAI client initialized successfully!")
+except Exception as e:
+    st.error(f"Error initializing Azure OpenAI client: {str(e)}")
+    st.stop()"Please check if your Azure OpenAI credentials are correctly set in Streamlit secrets.")
+        st.stop()
+
 
 # Add title and description
 st.title("Query Processing Application")
