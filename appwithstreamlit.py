@@ -5,33 +5,33 @@ from difflib import SequenceMatcher
 import re
 import requests
 
-AZURE_OPENAI_KEY = st.secrets.get("AZURE_OPENAI_KEY", None)
-AZURE_OPENAI_ENDPOINT = st.secrets.get("AZURE_OPENAI_ENDPOINT", None)
-
-if not AZURE_OPENAI_KEY or not AZURE_OPENAI_ENDPOINT:
-    st.error("Missing Azure OpenAI credentials in secrets. Please check your secrets.toml file.")
-    st.stop()
-
 try:
-    # Initialize Azure OpenAI client
+    # Try to access secrets and show status
+    if "AZURE_OPENAI_KEY" in st.secrets:
+        st.sidebar.success("Azure OpenAI Key found in secrets!")
+    else:
+        st.sidebar.error("Azure OpenAI Key not found in secrets!")
+        
+    if "AZURE_OPENAI_ENDPOINT" in st.secrets:
+        st.sidebar.success("Azure OpenAI Endpoint found in secrets!")
+    else:
+        st.sidebar.error("Azure OpenAI Endpoint not found in secrets!")
+
+    # Initialize Azure OpenAI client without proxies
     client = AzureOpenAI(
-        api_key=AZURE_OPENAI_KEY,
+        api_key=st.secrets["AZURE_OPENAI_KEY"],
         api_version="2024-02-15-preview",
-        azure_endpoint=AZURE_OPENAI_ENDPOINT
+        azure_endpoint=st.secrets["AZURE_OPENAI_ENDPOINT"],
+        default_headers={"Proxy-Authorization": None}  # Remove proxy settings
     )
-    st.success("Successfully connected to Azure OpenAI!")
+    st.sidebar.success("Successfully initialized Azure OpenAI client!")
+
 except Exception as e:
-    st.error(f"Failed to initialize Azure OpenAI client: {str(e)}")
+    st.sidebar.error(f"Error with secrets or client initialization: {str(e)}")
     st.stop()
 
+# Constants
 AZURE_OPENAI_MODEL = "gpt-4o-20240513"
-
-# Initialize OpenAI client
-client = AzureOpenAI(
-    api_key=azure_openai_api_key,
-    api_version="2024-02-15-preview",
-    azure_endpoint=azure_openai_endpoint
-)
 
 def get_correct_column_name(df, column_name):
     """
