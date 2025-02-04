@@ -58,6 +58,11 @@ def load_mapping_data():
         st.error(f"Error loading mapping file: {e}")
         return None
 
+def clean_column_names(df):
+    """Clean DataFrame column names by removing leading/trailing whitespace."""
+    df.columns = [col.strip() for col in df.columns]
+    return df
+
 
 def get_correct_column_name(df, column_name):
     """
@@ -547,6 +552,7 @@ def main():
         # Load raw data with improved error handling
         try:
             raw_data = pd.read_excel(RAW_DATA_FILE, skiprows=1)
+            raw_data = clean_column_names(raw_data)
             
             # Verify if NPI column exists (case-insensitive check)
             npi_columns = [col for col in raw_data.columns if col.upper() == 'NPI']
