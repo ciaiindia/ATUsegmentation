@@ -24,10 +24,11 @@ def initialize_azure_client():
         st.write("Using Azure OpenAI endpoint:", credentials["endpoint"])
         st.write("Using Azure OpenAI model:", credentials["model"])
         
-        # Initialize the client with minimal arguments
+        # Initialize the client with all required parameters
         client = AzureOpenAI(
             api_key=credentials["api_key"],
-            azure_endpoint=credentials["endpoint"]
+            azure_endpoint=credentials["endpoint"],
+            api_version="2024-02-15-preview"  # Adding back the API version
         )
         
         # Test the client with a simple completion
