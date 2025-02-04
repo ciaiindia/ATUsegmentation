@@ -5,21 +5,26 @@ from difflib import SequenceMatcher
 import re
 import os
 from dotenv import load_dotenv
+import io
 
 # Load environment variables
 load_dotenv()
 
-# Azure OpenAI setup
-azure_openai_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "https://ciaiaiservices.openai.azure.com/")
-azure_openai_api_key = os.getenv("AZURE_OPENAI_API_KEY")
-azure_openai_model_gpt4 = os.getenv("AZURE_OPENAI_MODEL", "gpt-4o-20240513")
+# Azure OpenAI setup with error handling
+try:
+    azure_openai_endpoint = st.secrets["AZURE_OPENAI_ENDPOINT"]
+    azure_openai_api_key = st.secrets["AZURE_OPENAI_API_KEY"]
+    azure_openai_model_gpt4 = st.secrets["AZURE_OPENAI_MODEL"]
 
-# Initialize Azure OpenAI client
-client = AzureOpenAI(
-    api_key=azure_openai_api_key,
-    api_version="2024-02-15-preview",
-    azure_endpoint=azure_openai_endpoint
-)
+    # Initialize Azure OpenAI client
+    client = AzureOpenAI(
+        api_key=azure_openai_api_key,
+        api_version="2024-02-15-preview",
+        azure_endpoint=azure_openai_endpoint
+    )
+except Exception as e:
+    st.error("Error initializing Azure OpenAI client. Please check your environment variables.")
+    st.stop()
 st.set_page_config(
     page_title="Query Processing App",
     page_icon="🔍",
