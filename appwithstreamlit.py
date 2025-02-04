@@ -6,15 +6,17 @@ import re
 import requests
 
 try:
+    # Initialize Azure OpenAI client with minimal configuration
     client = AzureOpenAI(
         api_key=st.secrets["AZURE_OPENAI_KEY"],
         api_version="2024-02-15-preview",
         azure_endpoint=st.secrets["AZURE_OPENAI_ENDPOINT"]
     )
-    st.sidebar.success("Successfully initialized Azure OpenAI client!")
+    st.sidebar.success("Successfully connected to Azure OpenAI!")
 except Exception as e:
     st.sidebar.error(f"Error initializing Azure OpenAI client: {str(e)}")
     st.stop()
+    
 def get_correct_column_name(df, column_name):
     """
     Get the actual column name from DataFrame accounting for whitespace variations.
